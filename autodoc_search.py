@@ -2,17 +2,15 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
-from fake_useragent import UserAgent
 from time import sleep
 import auth_Auotodoc
 import json
 
-useragent = UserAgent()
 
 options = webdriver.ChromeOptions()
 options.headless = True  # работа браузера в тихом режиме
 options.add_argument('--disable-blink-features-AutomationControlled')  # отключение режима WebDriver
-options.add_argument(f'user-agent={useragent.random}')
+options.add_argument(f'user-agent=Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.2117.157 Safari/537.36')
 s = Service(r"E:\Python\autoParsing\chromedriver.exe")
 
 
@@ -20,7 +18,7 @@ def autodoc_parse(partnumber: str, partname: str = None, manufacturer: str = Non
     browser = webdriver.Chrome(service=s, options=options)
     browser.get('https://www.autodoc.ru/')
     sleep(2)
-    auth(browser)  # авторизация
+    autodoc_auth(browser)  # авторизация на сайте AutoDoc.ru
     finder = browser.find_element(By.XPATH, '//*[@id="partNumberSearch"]')  # окно для ввода номера детали
     finder.clear()
     finder.send_keys(partnumber)  # W7008  2074151  92101-4X000
@@ -40,22 +38,23 @@ def autodoc_parse(partnumber: str, partname: str = None, manufacturer: str = Non
             num, manufacturer, partname = required_manufacturer(d_companies)
         else:
             num = [i.text for i in names].index(partname) + 1
-        names[num-1].click()
+        names[num - 1].click()
     except Exception:
-        browser.implicitly_wait(15)
+        browser.implicitly_wait(8)
         q = browser.find_element(By.TAG_NAME, 'h1')
         manufacturer, _, _, *partname = q.text.split()
         partname = ' '.join(partname)
     finally:
-        browser.implicitly_wait(15)
+        browser.implicitly_wait(8)
         price = browser.find_element(by=By.TAG_NAME, value='tbody').find_element(by=By.TAG_NAME, value='span').text
         price = int(price.split('.')[0].replace(' ', ''))
         browser.close()
         browser.quit()
+        print(1)
     return price, partname, manufacturer, 'Autodoc'
 
 
-def auth(browser) -> None:
+def autodoc_auth(browser) -> None:
     """Авторизация на сайте"""
 
     """Вход с вводом логина и пароля"""
@@ -67,7 +66,7 @@ def auth(browser) -> None:
     sleep(2)
     with open(f'{auth_Auotodoc.login}_cookies', 'w') as fin:
         json.dump(browser.get_cookies(), fin)
-    # sleep(3)
+    sleep(3)
 
     """Вход по заранее сохраненным куки-файлам"""
     # browser.delete_all_cookies()
@@ -80,10 +79,14 @@ def auth(browser) -> None:
 
 
 def required_manufacturer(manufacturers_options: dict) -> tuple:
+    '''Принимает варианты запчастей, подходящие под запрошенный partnumber.
+    Возвращает порядковый номер в спике, производителя и partnumber запчасти в соответствии с выбором клиента.
+    '''
     for i, (key, value) in manufacturers_options.items():
         print(f'{i}) {key} \t {value}')
     answer = input('Введите номер нужного варианта: ')
     return int(answer), *manufacturers_options[int(answer)]
+
 
 # print(autodoc_parse('W7008'))
 # print(autodoc_parse('2074151'))
