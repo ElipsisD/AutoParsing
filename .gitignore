@@ -4,3 +4,4 @@ __pycache__/
 *cookies*
 TestFolder/
 /.idea/
+*.db
